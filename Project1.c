@@ -2,6 +2,18 @@
 #include<stdlib.h>
 #include <sys/shm.h>
 #include <semaphore.h>
+
+/*shared memory and semaphore stuff*/
+//https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
+void* create_shared_memory(size_t)
+{   
+    //gives it read and write
+    int protection = PROT_READ | PROT_WRITE;
+    //memory is shared between processes but only this process and it's children.
+    int visibility = MAP_ANONYMOUS | MAP_SHARED;
+    //
+}
+
 //http://www.geeksforgeeks.org/generic-linked-list-in-c-2/
 /* A linked list node */
 struct Node
@@ -48,7 +60,7 @@ void printList(struct Node *node, void (*fptr)(void *))
 struct Node* unlink(struct Node** head_ref)
 {
     struct Node* temp = (*head_ref);
-
+    
 }
 
 void link (struct Node** head_ref, struct Node *a)
