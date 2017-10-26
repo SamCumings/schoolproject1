@@ -1,7 +1,12 @@
-#include<stdio.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <semaphore.h>
 #include <sys/mman.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+
+
 /*shared memory and semaphore stuff*/
 //https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
 void* create_shared_memory(size_t size)
@@ -86,5 +91,6 @@ void consume_blah(struct Node* c)
 }
 int main (void)
 {
+    sem_t *sem
     return 0;
 }
