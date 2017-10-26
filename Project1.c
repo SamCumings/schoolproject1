@@ -5,13 +5,14 @@
 
 /*shared memory and semaphore stuff*/
 //https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
-void* create_shared_memory(size_t)
+void* create_shared_memory(size_t size)
 {   
     //gives it read and write
     int protection = PROT_READ | PROT_WRITE;
     //memory is shared between processes but only this process and it's children.
     int visibility = MAP_ANONYMOUS | MAP_SHARED;
-    //
+    //makes the shared memory block
+    return mmap(NULL, size, protection, visibility, 0, 0);
 }
 
 //http://www.geeksforgeeks.org/generic-linked-list-in-c-2/
