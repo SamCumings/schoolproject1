@@ -1,8 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include <sys/shm.h>
 #include <semaphore.h>
-
+#include <sys/mman.h>
 /*shared memory and semaphore stuff*/
 //https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
 void* create_shared_memory(size_t size)
@@ -14,6 +13,8 @@ void* create_shared_memory(size_t size)
     //makes the shared memory block
     return mmap(NULL, size, protection, visibility, 0, 0);
 }
+
+
 
 //http://www.geeksforgeeks.org/generic-linked-list-in-c-2/
 /* A linked list node */
@@ -79,7 +80,11 @@ void calc_blah(struct Node* a, struct Node* b)
 
 }
 
-void consume_blah(stuct Node* c)
+void consume_blah(struct Node* c)
 {
 
+}
+int main (void)
+{
+    return 0;
 }
