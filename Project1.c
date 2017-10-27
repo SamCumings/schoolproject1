@@ -7,6 +7,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+//https://stackoverflow.com/questions/33293121/how-to-allocate-linked-list-inside-struct-in-shared-memory-c
+#define MAX_DLEN 10             // Max. number of list nodes
+#define DNULL (MAX_DLEN + 1)    // NULL value
+
+typedef struct DNode DNode;
+typedef struct DList DList;
+
 sem_t *MxFL, *MxL1, *MxL2, *SCFL,*SCL1,*SCL2,*LastSem;
 /*shared memory and semaphore stuff*/
 //https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
@@ -20,75 +27,84 @@ void* create_shared_memory(size_t size)
     return mmap(NULL, size, protection, visibility, 0, 0);
 }
 
-
-
-//http://www.geeksforgeeks.org/generic-linked-list-in-c-2/
-/* A linked list node */
-struct Node
-{
-    // Any data type can be stored in this node
-    void  *data;
-
-    struct Node *next;
+struct DNode {
+    int data;
+    size_t next;
 };
+struct DList {
+    DNode pool[MAX_DLEN]; //our nodes hold an int
+    size_t npool;
+    size_t pfree;
+    size_t head;
+};
+DList *FreeList,*List1,*List2;
 
-/* Function to add a node at the beginning of Linked List.
-   This function expects a pointer to the data to be added
-   and size of the data type */
-void push(struct Node** head_ref, void *new_data, size_t data_size)
+DNode *dnode_alloc(DList* List)
 {
-    // Allocate memory for node
-    struct Node* new_node = (struct Node*)malloc(sizeof(struct Node));
- 
-    new_node->data  = malloc(data_size);
-    new_node->next = (*head_ref);
- 
-    // Copy contents of new_data to newly allocated memory.
-    // Assumption: char takes 1 byte.
-    int i;
-    for (i=0; i<data_size; i++)
-        *(char *)(new_node->data + i) = *(char *)(new_data + i);
- 
-    // Change head pointer as new node is added at the beginning
-    (*head_ref)    = new_node;
+    if(List->pfree != DNULL){
+        DNode *node = List->pool + List->pfree;
+
+        List->pfree = List->pool[List->pfree].next;
+        return node;
+    } else {
+        if (List->npool < MAX_DLEN) return &List->pool[List->npool++];
+    }
+
+    return NULL;
 }
- 
-/* Function to print nodes in a given linked list. fpitr is used
-   to access the function to be used for printing current node data.
-   Note that different data types need different specifier in printf() */
-void printList(struct Node *node, void (*fptr)(void *))
-{
-    while (node != NULL)
-    {
-        (*fptr)(node->data);
-        node = node->next;
+
+void dnode_free(DNode *node, DList* List){
+    if(node){
+        node->next=List->pfree;
+        List->pfree=node-List->pool;
+
     }
 }
 
-struct Node* unlink_node(struct Node** head_ref)
+DNode *dnode(size_t index,DList*  List)
 {
-    struct Node* temp = (*head_ref);
-    
+    return (index==DNULL)?NULL : List->pool + index;
+}
+DNode *dnode_next(const DNode* node, DList* List)
+{
+    return dnode(node->next, List);    
 }
 
-void link_node (struct Node** head_ref, struct Node *a)
+void link_node (size_t *head, DNode* node , DList *New_List)
 {
-
-}
-
-void produce_blah(struct Node* a)
-{
-
-}
-
-void calc_blah(struct Node* a, struct Node* b)
-{
+    DNode *temp = dnode_alloc(New_List);
+    temp = node;
+    node->next=*head;
+    *head = node - New_List->pool;
 
 }
 
-void consume_blah(struct Node* c)
+DNode* unlink_node(size_t *head,DList *List) 
 {
+    if(*head !=DNULL){
+        size_t next = List->pool[*head].next;
+        size_t temp = *head;
+        dnode_free(&List->pool[*head].next,List);
+        
+        *head = next;
+        return temp;
+    } 
+}
 
+
+void produce_blah( DNode* node)
+{
+    node->data=1;
+}
+
+void calc_blah(DNode* node_a, DNode* node_b) 
+{
+    node_b->data=node_a->data+1;
+}
+
+void consume_blah(DNode* node)
+{
+    node->data=0;
 }
 
 void free_sem(){
