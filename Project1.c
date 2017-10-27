@@ -5,8 +5,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <unistd.h>
 
-
+sem_t *MxFL, *MxL1, *MxL2, *SCFL,*SCL1,*SCL2,*LastSem;
 /*shared memory and semaphore stuff*/
 //https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
 void* create_shared_memory(size_t size)
@@ -64,13 +65,13 @@ void printList(struct Node *node, void (*fptr)(void *))
     }
 }
 
-struct Node* unlink(struct Node** head_ref)
+struct Node* unlink_node(struct Node** head_ref)
 {
     struct Node* temp = (*head_ref);
     
 }
 
-void link (struct Node** head_ref, struct Node *a)
+void link_node (struct Node** head_ref, struct Node *a)
 {
 
 }
@@ -89,6 +90,26 @@ void consume_blah(struct Node* c)
 {
 
 }
+
+void free_sem(){
+    sem_unlink( "Mutex_Free_List"); 
+    sem_unlink( "Mutex_List1");
+    sem_unlink( "Mutex_List2"); 
+    sem_unlink( "Count_Free_List");
+    sem_unlink( "Count_List1");
+    sem_unlink( "Count_List2");
+    sem_unlink( "Last_Sem");
+    sem_close(MxFL); 
+    sem_close(MxL1);
+    sem_close(MxL2); 
+    sem_close(SCFL); 
+    sem_close(SCL1);       
+    sem_close(SCL2);       
+    sem_close(LastSem);
+
+}
+
+
 void produce_pro(){
 
 }
@@ -103,7 +124,7 @@ int main (void)
     sem_t *MxFL, *MxL1, *MxL2, *SCFL,*SCL1,*SCL2,*LastSem;
     int n = 10;
     int i =0;
-    pid_t pid;    
+    pid_t pid,pro_id,calc_id,con_id;    
 
     MxFL = sem_open ("Mutex_Free_List", O_CREAT | O_EXCL, 0644, 1); 
     MxL1 = sem_open ("Mutex_List1", O_CREAT | O_EXCL, 0644, 1); 
@@ -113,39 +134,49 @@ int main (void)
     SCL2 = sem_open ("Count_List2", O_CREAT | O_EXCL, 0644, 0); 
     LastSem = sem_open ("Last_Sem", O_CREAT | O_EXCL, 0644, 1); 
     //make child processes https://stackoverflow.com/questions/16400820/c-how-to-use-posix-semaphores-on-forked-processes
-    for(i=0;i<3;i++){
+    pid=fork();
+    if(pid<0){
+        //check for errors and make sure the semphores doen't exist forever.
+        free_sem();
+        printf("fork_error\n");       
+    }
+    //child process
+    else if(pid == 0){
+        produce_pro();
+    }else{
         pid=fork();
         if(pid<0){
-            //check for errors and make sure the semphores doen't exist forever.
-            
-            sem_unlink( "Mutex_Free_List"); 
-            sem_unlink( "Mutex_List1");
-            sem_unlink( "Mutex_List2"); 
-            sem_unlink( "Count_Free_List");
-            sem_unlink( "Count_List1");
-            sem_unlink( "Count_List2");
-            sem_unlink( "Last_Sem");
-            sem_close(MxFL); 
-            sem_close(MxL1);
-            sem_close(MxL2); 
-            sem_close(SCFL); 
-            sem_close(SCL1);       
-            sem_close(SCL2);       
-            sem_close(LastSem);
-            printf("fork_error\n");       
+            free_sem();
+            printf("fork_error\n");
         }
-        else if(pid == 0) break;//child process
+        else if(pid==0){
+            calc_pro();
+        }else{
+            pid=fork();
+            if(pid<0){
+                free_sem();
+                 printf("fork_error\n");
+            }
+            else if(pid==0){
+                consume_pro();
+            }
+            else{
+                if(pid!=0){
+                    while((pid = waitpid(-1,NULL,0))){
+                        if(errno==ECHILD) break;
+                    }
+                    printf("\n We Done \n");
 
-        //parent procces works as a holding place
-        if(pid!=0){
-            while(pid = waitpid(-1,NULL,0)){
-                if(errno==ECHILD)
-                    break;
+                    //need to free memory here I think.
+
+                    //free semaphores
+                    free_sem();
+                    exit(0); 
+                }
+
             }
         }
 
     }
-      
-    
     return 0;
 }
