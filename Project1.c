@@ -89,8 +89,63 @@ void consume_blah(struct Node* c)
 {
 
 }
+void produce_pro(){
+
+}
+void calc_pro(){
+
+}
+void consume_pro(){
+
+}
 int main (void)
 {
-    sem_t *sem
+    sem_t *MxFL, *MxL1, *MxL2, *SCFL,*SCL1,*SCL2,*LastSem;
+    int n = 10;
+    int i =0;
+    pid_t pid;    
+
+    MxFL = sem_open ("Mutex_Free_List", O_CREAT | O_EXCL, 0644, 1); 
+    MxL1 = sem_open ("Mutex_List1", O_CREAT | O_EXCL, 0644, 1); 
+    MxL2 = sem_open ("Mutex_List2", O_CREAT | O_EXCL, 0644, 1); 
+    SCFL = sem_open ("Count_Free_List", O_CREAT | O_EXCL, 0644, n-1); 
+    SCL1 = sem_open ("Count_List1", O_CREAT | O_EXCL, 0644, 0); 
+    SCL2 = sem_open ("Count_List2", O_CREAT | O_EXCL, 0644, 0); 
+    LastSem = sem_open ("Last_Sem", O_CREAT | O_EXCL, 0644, 1); 
+    //make child processes https://stackoverflow.com/questions/16400820/c-how-to-use-posix-semaphores-on-forked-processes
+    for(i=0;i<3;i++){
+        pid=fork();
+        if(pid<0){
+            //check for errors and make sure the semphores doen't exist forever.
+            
+            sem_unlink( "Mutex_Free_List"); 
+            sem_unlink( "Mutex_List1");
+            sem_unlink( "Mutex_List2"); 
+            sem_unlink( "Count_Free_List");
+            sem_unlink( "Count_List1");
+            sem_unlink( "Count_List2");
+            sem_unlink( "Last_Sem");
+            sem_close(MxFL); 
+            sem_close(MxL1);
+            sem_close(MxL2); 
+            sem_close(SCFL); 
+            sem_close(SCL1);       
+            sem_close(SCL2);       
+            sem_close(LastSem);
+            printf("fork_error\n");       
+        }
+        else if(pid == 0) break;//child process
+
+        //parent procces works as a holding place
+        if(pid!=0){
+            while(pid = waitpid(-1,NULL,0)){
+                if(errno==ECHILD)
+                    break;
+            }
+        }
+
+    }
+      
+    
     return 0;
 }
