@@ -10,6 +10,7 @@
 //https://stackoverflow.com/questions/33293121/how-to-allocate-linked-list-inside-struct-in-shared-memory-c
 #define MAX_DLEN 10             // Max. number of list nodes
 #define DNULL (MAX_DLEN + 1)    // NULL value
+#define MAX_ITER 500            // Number of times each process will run
 
 typedef struct DNode DNode;
 typedef struct DList DList;
@@ -39,6 +40,29 @@ struct DList {
 };
 DList *FreeList,*List1,*List2;
 
+void init_list(DList*List,int size){
+    List->head=DNULL;
+    List->pfree=DNULL;
+    List->npool=0;
+    int i=0;
+    for(i=0;i<size;i++){
+        dnode_push(List,0);     
+    }
+}
+
+DNode *dnode_push(DList*List,int num)
+{
+    size_t *head =&List->head;
+    DNode * node = dnode_alloc(List);
+
+    if(node){
+        node->data=num;
+        node->next=*head;
+        *head = node - List->pool;
+    }
+    return node;
+}
+
 DNode *dnode_alloc(DList* List)
 {
     if(List->pfree != DNULL){
@@ -47,7 +71,10 @@ DNode *dnode_alloc(DList* List)
         List->pfree = List->pool[List->pfree].next;
         return node;
     } else {
-        if (List->npool < MAX_DLEN) return &List->pool[List->npool++];
+        if (List->npool < MAX_DLEN){
+            DNode *node_test = &List->pool[List->npool++];
+            return node_test; 
+        }
     }
 
     return NULL;
@@ -61,17 +88,18 @@ void dnode_free(DNode *node, DList* List){
     }
 }
 
-DNode *dnode(size_t index,DList*  List)
+DNode *dnode(size_t index,DList* List)
 {
     return (index==DNULL)?NULL : List->pool + index;
 }
 DNode *dnode_next(const DNode* node, DList* List)
 {
-    return dnode(node->next, List);    
+    return dnode(node->next, List);
 }
 
-void link_node (size_t *head, DNode* node , DList *New_List)
+void link_node ( DNode* node , DList *New_List)
 {
+    size_t*head=&New_List->head;
     DNode *temp = dnode_alloc(New_List);
     temp = node;
     node->next=*head;
@@ -79,8 +107,10 @@ void link_node (size_t *head, DNode* node , DList *New_List)
 
 }
 
-DNode* unlink_node(size_t *head,DList *List) 
+DNode* unlink_node(DList *List) 
 {
+
+    size_t*head=&List->head;
     if(*head !=DNULL){
         size_t next = List->pool[*head].next;
         size_t temp = *head;
@@ -127,18 +157,52 @@ void free_sem(){
 
 
 void produce_pro(){
+    DNode* b_node;
+    int i=0;
+    //we could make this while(1) but I want the program to end.
+    for (i=0;i< MAX_ITER; i++){
+
+        b_node = unlink_node(FreeList);    
+        
+        produce_blah(b_node);
+
+        link_node(b_node,List1);
+    } 
 
 }
 void calc_pro(){
+    DNode *x_node,*y_node;
 
+    int i=0;
+    for (i=0;i< MAX_ITER; i++){
+        
+        x_node=unlink_node(List1);
+
+        y_node=unlink_node(FreeList);
+
+        calc_blah(x_node,y_node);
+
+        link_node(x_node,FreeList);
+
+        link_node(y_node,List2);
+    }
 }
 void consume_pro(){
+    DNode *c_node;
+    int i=0;
+    for (i=0;i< MAX_ITER; i++){
 
+        c_node = unlink_node(List2);
+
+        consume_blah(c_node);
+
+        link_node(c_node, FreeList);
+
+    }
 }
 int main (void)
 {
-    sem_t *MxFL, *MxL1, *MxL2, *SCFL,*SCL1,*SCL2,*LastSem;
-    int n = 10;
+    int n = MAX_DLEN;
     int i =0;
     pid_t pid,pro_id,calc_id,con_id;    
 
@@ -148,7 +212,15 @@ int main (void)
     SCFL = sem_open ("Count_Free_List", O_CREAT | O_EXCL, 0644, n-1); 
     SCL1 = sem_open ("Count_List1", O_CREAT | O_EXCL, 0644, 0); 
     SCL2 = sem_open ("Count_List2", O_CREAT | O_EXCL, 0644, 0); 
-    LastSem = sem_open ("Last_Sem", O_CREAT | O_EXCL, 0644, 1); 
+    LastSem = sem_open ("Last_Sem", O_CREAT | O_EXCL, 0644, 1);
+
+    FreeList=create_shared_memory(sizeof(DList));
+    init_list(FreeList,n);
+    List1=create_shared_memory(sizeof(DList)); 
+    init_list(List1,0);
+    List2=create_shared_memory(sizeof(DList)); 
+    init_list(List2,0);
+    
     //make child processes https://stackoverflow.com/questions/16400820/c-how-to-use-posix-semaphores-on-forked-processes
     pid=fork();
     if(pid<0){
