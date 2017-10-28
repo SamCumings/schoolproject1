@@ -40,15 +40,24 @@ struct DList {
 };
 DList *FreeList,*List1,*List2;
 
-void init_list(DList*List,int size){
-    List->head=DNULL;
-    List->pfree=DNULL;
-    List->npool=0;
-    int i=0;
-    for(i=0;i<size;i++){
-        dnode_push(List,0);     
+DNode *dnode_alloc(DList* List)
+{
+    if(List->pfree != DNULL){
+        DNode *node = List->pool + List->pfree;
+
+        List->pfree = List->pool[List->pfree].next;
+        return node;
+    } else {
+        if (List->npool < MAX_DLEN){
+            DNode *node_test = &List->pool[List->npool++];
+            return node_test; 
+        }
     }
+    DNode* test =NULL;
+
+    return test;
 }
+
 
 DNode *dnode_push(DList*List,int num)
 {
@@ -63,21 +72,15 @@ DNode *dnode_push(DList*List,int num)
     return node;
 }
 
-DNode *dnode_alloc(DList* List)
-{
-    if(List->pfree != DNULL){
-        DNode *node = List->pool + List->pfree;
 
-        List->pfree = List->pool[List->pfree].next;
-        return node;
-    } else {
-        if (List->npool < MAX_DLEN){
-            DNode *node_test = &List->pool[List->npool++];
-            return node_test; 
-        }
+void init_list(DList*List,int size){
+    List->head=DNULL;
+    List->pfree=DNULL;
+    List->npool=0;
+    int i=0;
+    for(i=0;i<size;i++){
+        dnode_push(List,0);     
     }
-
-    return NULL;
 }
 
 void dnode_free(DNode *node, DList* List){
@@ -118,7 +121,8 @@ DNode* unlink_node(DList *List)
         
         *head = next;
         return temp;
-    } 
+    }
+    return NULL; 
 }
 
 
