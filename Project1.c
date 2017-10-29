@@ -134,19 +134,19 @@ DNode* unlink_node(DList *List)
 void produce_blah( DNode* node)
 {
     node->data=1;
-    printf("produce\n");
+    printf("produce data = %d\n",node->data);
 }
 
 void calc_blah(DNode* node_a, DNode* node_b) 
 {
     node_b->data=node_a->data+1;
-    printf("calc\n");
+    printf("calc data = %d\n",node_b->data);
 }
 
 void consume_blah(DNode* node)
 {
     node->data=0;
-    printf("consume\n");
+    printf("consume data =%d \n",node->data);
 }
 
 void free_sem(){
@@ -170,10 +170,11 @@ void free_sem(){
 
 void produce_pro(){
     DNode* b_node;
-    printf("produce proccess\n");
     int i=0;
     //we could make this while(1) but I want the program to end.
     for (i=0;i< MAX_ITER; i++){
+        printf("produce proccess: %d\n",i);
+        sem_wait(LastSem);
         sem_wait(SCFL);
         sem_wait(MxFL);  
         b_node = unlink_node(FreeList);    
@@ -190,10 +191,9 @@ void produce_pro(){
 void calc_pro(){
     DNode *x_node,*y_node;
 
-    printf("calc process\n");
-
     int i=0;
     for (i=0;i< MAX_ITER; i++){
+        printf("calc process %d \n",i);
         sem_wait(SCL1);
         sem_wait(MxL1);
         x_node=unlink_node(List1);
@@ -216,8 +216,8 @@ void calc_pro(){
 void consume_pro(){
     DNode *c_node;
     int i=0;
-    printf("consume process\n");
     for (i=0;i< MAX_ITER; i++){
+        printf("consume process: %d\n",i);
         sem_wait(SCL2);
         sem_wait(MxL2);
         c_node = unlink_node(List2);
@@ -227,6 +227,7 @@ void consume_pro(){
         link_node(c_node, FreeList);
         sem_post(MxFL);
         sem_post(SCL1);
+        sem_post(LastSem);
     }
 }
 int main (void)
@@ -238,10 +239,10 @@ int main (void)
     MxFL = sem_open ("Mutex_Free_List", O_CREAT | O_EXCL, 0644, 1); 
     MxL1 = sem_open ("Mutex_List1", O_CREAT | O_EXCL, 0644, 1); 
     MxL2 = sem_open ("Mutex_List2", O_CREAT | O_EXCL, 0644, 1); 
-    SCFL = sem_open ("Count_Free_List", O_CREAT | O_EXCL, 0644, n-1); 
+    SCFL = sem_open ("Count_Free_List", O_CREAT | O_EXCL, 0644, n); 
     SCL1 = sem_open ("Count_List1", O_CREAT | O_EXCL, 0644, 0); 
     SCL2 = sem_open ("Count_List2", O_CREAT | O_EXCL, 0644, 0); 
-    LastSem = sem_open ("Last_Sem", O_CREAT | O_EXCL, 0644, 1);
+    LastSem = sem_open ("Last_Sem", O_CREAT | O_EXCL, 0644, n-1);
 
     FreeList=create_shared_memory(sizeof(DList));
     init_list(FreeList,n);
