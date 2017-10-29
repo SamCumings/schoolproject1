@@ -129,16 +129,19 @@ DNode* unlink_node(DList *List)
 void produce_blah( DNode* node)
 {
     node->data=1;
+    printf("produce\n");
 }
 
 void calc_blah(DNode* node_a, DNode* node_b) 
 {
     node_b->data=node_a->data+1;
+    printf("calc\n");
 }
 
 void consume_blah(DNode* node)
 {
     node->data=0;
+    printf("consume\n");
 }
 
 void free_sem(){
