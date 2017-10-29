@@ -103,25 +103,30 @@ DNode *dnode_next(const DNode* node, DList* List)
 void link_node ( DNode* node , DList *New_List)
 {
     size_t*head=&New_List->head;
+    printf("start of link\n");
     DNode *temp = dnode_alloc(New_List);
     temp = node;
     node->next=*head;
     *head = node - New_List->pool;
-
+    
+    printf("end of link\n");
 }
 
 DNode* unlink_node(DList *List) 
 {
 
     size_t*head=&List->head;
+    printf("in unlink\n");
     if(*head !=DNULL){
         size_t next = List->pool[*head].next;
-        size_t temp = *head;
-        dnode_free(&List->pool[*head].next,List);
+        DNode* temp = &List->pool[*head];
+        dnode_free(&List->pool[*head],List);
         
         *head = next;
+        printf("end of unlink in if\n");
         return temp;
     }
+    printf("end of unlink out of if\n");
     return NULL; 
 }
 
@@ -165,46 +170,63 @@ void free_sem(){
 
 void produce_pro(){
     DNode* b_node;
+    printf("produce proccess\n");
     int i=0;
     //we could make this while(1) but I want the program to end.
     for (i=0;i< MAX_ITER; i++){
-
+        sem_wait(SCFL);
+        sem_wait(MxFL);  
         b_node = unlink_node(FreeList);    
-        
+        sem_post(MxFL);
         produce_blah(b_node);
-
+        sem_wait(MxL1);
+        printf("is this happening, inside pro loop\n");
         link_node(b_node,List1);
+        sem_post(MxL1);
+        sem_post(SCL1);
     } 
 
 }
 void calc_pro(){
     DNode *x_node,*y_node;
 
+    printf("calc process\n");
+
     int i=0;
     for (i=0;i< MAX_ITER; i++){
-        
+        sem_wait(SCL1);
+        sem_wait(MxL1);
         x_node=unlink_node(List1);
-
+        sem_post(MxL1);
+        sem_wait(SCFL);
+        sem_wait(MxFL);
         y_node=unlink_node(FreeList);
-
+        sem_post(MxFL);
         calc_blah(x_node,y_node);
-
+        sem_wait(MxFL);
         link_node(x_node,FreeList);
-
+        sem_post(MxFL);
+        sem_post(SCFL);
+        sem_wait(MxL2);
         link_node(y_node,List2);
+        sem_post(MxL2);
+        sem_post(SCL2);
     }
 }
 void consume_pro(){
     DNode *c_node;
     int i=0;
+    printf("consume process\n");
     for (i=0;i< MAX_ITER; i++){
-
+        sem_wait(SCL2);
+        sem_wait(MxL2);
         c_node = unlink_node(List2);
-
+        sem_post(MxL2);
         consume_blah(c_node);
-
+        sem_wait(MxFL);
         link_node(c_node, FreeList);
-
+        sem_post(MxFL);
+        sem_post(SCL1);
     }
 }
 int main (void)
