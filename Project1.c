@@ -8,14 +8,13 @@
 #include <unistd.h>
 
 //https://stackoverflow.com/questions/33293121/how-to-allocate-linked-list-inside-struct-in-shared-memory-c
-#define MAX_DLEN 10             // Max. number of list nodes
+#define MAX_DLEN 15             // Max. number of list nodes
 #define DNULL (MAX_DLEN + 1)    // NULL value
 #define MAX_ITER 500            // Number of times each process will run
 
 typedef struct DNode DNode;
 typedef struct DList DList;
 
-sem_t *MxFL, *MxL1, *MxL2, *SCFL,*SCL1,*SCL2,*LastSem;
 /*shared memory and semaphore stuff*/
 //https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c
 void* create_shared_memory(size_t size)
@@ -54,6 +53,7 @@ DNode *dnode_alloc(DList* List)
         }
     }
     DNode* test =NULL;
+    printf("NULL<<<<<<<<<>>>>>>>>>>>");
 
     return test;
 }
@@ -115,7 +115,7 @@ void link_node ( DNode* node , DList *New_List)
 DNode* unlink_node(DList *List) 
 {
 
-    size_t*head=&List->head;
+    size_t * head = &List->head;
     printf("in unlink\n");
     if(*head !=DNULL){
         size_t next = List->pool[*head].next;
@@ -127,6 +127,7 @@ DNode* unlink_node(DList *List)
         return temp;
     }
     printf("end of unlink out of if\n");
+    printf("NULLLLLLLIIIIINNNNUNLINK");
     return NULL; 
 }
 
@@ -146,10 +147,19 @@ void calc_blah(DNode* node_a, DNode* node_b)
 void consume_blah(DNode* node)
 {
     node->data=0;
-    printf("consume data =%d \n",node->data);
+    printf(">>>>>>>>>>>>>>>consume data =%d \n",node->data);
 }
 
 void free_sem(){
+    sem_t* MxFL = sem_open ("Mutex_Free_List", O_CREAT ); 
+    sem_t* MxL1 = sem_open ("Mutex_List1", O_CREAT ); 
+    sem_t* MxL2 = sem_open ("Mutex_List2", O_CREAT); 
+    sem_t* SCFL = sem_open ("Count_Free_List", O_CREAT ); 
+    sem_t* SCL1 = sem_open ("Count_List1", O_CREAT ); 
+    sem_t* SCL2 = sem_open ("Count_List2", O_CREAT ); 
+    sem_t* LastSem = sem_open ("Last_Sem", O_CREAT );
+
+
     sem_unlink( "Mutex_Free_List"); 
     sem_unlink( "Mutex_List1");
     sem_unlink( "Mutex_List2"); 
@@ -169,10 +179,19 @@ void free_sem(){
 
 
 void produce_pro(){
-    DNode* b_node;
+    sem_t* MxFL = sem_open ("Mutex_Free_List", O_CREAT ); 
+    sem_t* MxL1 = sem_open ("Mutex_List1", O_CREAT ); 
+    sem_t* MxL2 = sem_open ("Mutex_List2", O_CREAT); 
+    sem_t* SCFL = sem_open ("Count_Free_List", O_CREAT ); 
+    sem_t* SCL1 = sem_open ("Count_List1", O_CREAT ); 
+    sem_t* SCL2 = sem_open ("Count_List2", O_CREAT ); 
+    sem_t* LastSem = sem_open ("Last_Sem", O_CREAT );
+
+
+     DNode* b_node;
     int i=0;
     //we could make this while(1) but I want the program to end.
-    for (i=0;i< MAX_ITER; i++){
+    while(1){
         printf("produce proccess: %d\n",i);
         sem_wait(LastSem);
         sem_wait(SCFL);
@@ -185,14 +204,24 @@ void produce_pro(){
         link_node(b_node,List1);
         sem_post(MxL1);
         sem_post(SCL1);
+        sem_post(LastSem);
+        i++;
     } 
 
 }
 void calc_pro(){
     DNode *x_node,*y_node;
+    sem_t* MxFL = sem_open ("Mutex_Free_List", O_CREAT ); 
+    sem_t* MxL1 = sem_open ("Mutex_List1", O_CREAT ); 
+    sem_t* MxL2 = sem_open ("Mutex_List2", O_CREAT); 
+    sem_t* SCFL = sem_open ("Count_Free_List", O_CREAT ); 
+    sem_t* SCL1 = sem_open ("Count_List1", O_CREAT ); 
+    sem_t* SCL2 = sem_open ("Count_List2", O_CREAT ); 
+    sem_t* LastSem = sem_open ("Last_Sem", O_CREAT );
+
 
     int i=0;
-    for (i=0;i< MAX_ITER; i++){
+    while(1){
         printf("calc process %d \n",i);
         sem_wait(SCL1);
         sem_wait(MxL1);
@@ -207,16 +236,27 @@ void calc_pro(){
         link_node(x_node,FreeList);
         sem_post(MxFL);
         sem_post(SCFL);
+        sem_post(LastSem);
         sem_wait(MxL2);
         link_node(y_node,List2);
         sem_post(MxL2);
         sem_post(SCL2);
+        i++;
     }
 }
 void consume_pro(){
+    sem_t* MxFL = sem_open ("Mutex_Free_List", O_CREAT ); 
+    sem_t* MxL1 = sem_open ("Mutex_List1", O_CREAT ); 
+    sem_t* MxL2 = sem_open ("Mutex_List2", O_CREAT); 
+    sem_t* SCFL = sem_open ("Count_Free_List", O_CREAT ); 
+    sem_t* SCL1 = sem_open ("Count_List1", O_CREAT ); 
+    sem_t* SCL2 = sem_open ("Count_List2", O_CREAT ); 
+    sem_t* LastSem = sem_open ("Last_Sem", O_CREAT );
+
+
     DNode *c_node;
     int i=0;
-    for (i=0;i< MAX_ITER; i++){
+    while(1){
         printf("consume process: %d\n",i);
         sem_wait(SCL2);
         sem_wait(MxL2);
@@ -226,8 +266,9 @@ void consume_pro(){
         sem_wait(MxFL);
         link_node(c_node, FreeList);
         sem_post(MxFL);
-        sem_post(SCL1);
+        sem_post(SCFL);
         sem_post(LastSem);
+        i++;
     }
 }
 int main (void)
@@ -236,13 +277,14 @@ int main (void)
     int i =0;
     pid_t pid,pro_id,calc_id,con_id;    
 
-    MxFL = sem_open ("Mutex_Free_List", O_CREAT | O_EXCL, 0644, 1); 
-    MxL1 = sem_open ("Mutex_List1", O_CREAT | O_EXCL, 0644, 1); 
-    MxL2 = sem_open ("Mutex_List2", O_CREAT | O_EXCL, 0644, 1); 
-    SCFL = sem_open ("Count_Free_List", O_CREAT | O_EXCL, 0644, n); 
-    SCL1 = sem_open ("Count_List1", O_CREAT | O_EXCL, 0644, 0); 
-    SCL2 = sem_open ("Count_List2", O_CREAT | O_EXCL, 0644, 0); 
-    LastSem = sem_open ("Last_Sem", O_CREAT | O_EXCL, 0644, n-1);
+    sem_t *MxFL, *MxL1, *MxL2, *SCFL,*SCL1,*SCL2,*LastSem;
+    MxFL = sem_open ("Mutex_Free_List", O_CREAT , 0777, 1); 
+    MxL1 = sem_open ("Mutex_List1", O_CREAT , 0777, 1); 
+    MxL2 = sem_open ("Mutex_List2", O_CREAT,  0777, 1); 
+    SCFL = sem_open ("Count_Free_List", O_CREAT , 0777, n); 
+    SCL1 = sem_open ("Count_List1", O_CREAT , 0777, 0); 
+    SCL2 = sem_open ("Count_List2", O_CREAT , 0777, 0); 
+    LastSem = sem_open ("Last_Sem", O_CREAT , 0777, n-1);
 
     FreeList=create_shared_memory(sizeof(DList));
     init_list(FreeList,n);
@@ -286,7 +328,9 @@ int main (void)
                     printf("\n We Done \n");
 
                     //need to free memory here I think.
-
+                    munmap(FreeList, sizeof(DList));
+                    munmap(List1, sizeof(DList));
+                    munmap(List2, sizeof(DList));
                     //free semaphores
                     free_sem();
                     exit(0); 
