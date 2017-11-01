@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 //https://stackoverflow.com/questions/33293121/how-to-allocate-linked-list-inside-struct-in-shared-memory-c
-#define MAX_DLEN 15             // Max. number of list nodes
+#define MAX_DLEN 50             // Max. number of list nodes
 #define DNULL (MAX_DLEN + 1)    // NULL value
 #define MAX_ITER 500            // Number of times each process will run
 
@@ -53,7 +53,6 @@ DNode *dnode_alloc(DList* List)
         }
     }
     DNode* test =NULL;
-    printf("NULL<<<<<<<<<>>>>>>>>>>>");
 
     return test;
 }
@@ -87,7 +86,7 @@ void dnode_free(DNode *node, DList* List){
     if(node){
         node->next=List->pfree;
         List->pfree=node-List->pool;
-
+        List->npool=List->npool--;
     }
 }
 
@@ -103,11 +102,10 @@ DNode *dnode_next(const DNode* node, DList* List)
 void link_node ( DNode* node , DList *New_List)
 {
     size_t*head=&New_List->head;
-    printf("start of link\n");
     DNode *temp = dnode_alloc(New_List);
-    temp = node;
-    node->next=*head;
-    *head = node - New_List->pool;
+    temp->data=node->data;
+    temp->next=*head;
+    *head = temp - New_List->pool;
     
     printf("end of link\n");
 }
@@ -116,7 +114,6 @@ DNode* unlink_node(DList *List)
 {
 
     size_t * head = &List->head;
-    printf("in unlink\n");
     if(*head !=DNULL){
         size_t next = List->pool[*head].next;
         DNode* temp = &List->pool[*head];
@@ -127,7 +124,7 @@ DNode* unlink_node(DList *List)
         return temp;
     }
     printf("end of unlink out of if\n");
-    printf("NULLLLLLLIIIIINNNNUNLINK");
+    printf("NULLLLLLLIIIIINNNNUNLINK\n");
     return NULL; 
 }
 
@@ -135,19 +132,16 @@ DNode* unlink_node(DList *List)
 void produce_blah( DNode* node)
 {
     node->data=1;
-    printf("produce data = %d\n",node->data);
 }
 
 void calc_blah(DNode* node_a, DNode* node_b) 
 {
     node_b->data=node_a->data+1;
-    printf("calc data = %d\n",node_b->data);
 }
 
 void consume_blah(DNode* node)
 {
     node->data=0;
-    printf(">>>>>>>>>>>>>>>consume data =%d \n",node->data);
 }
 
 void free_sem(){
@@ -200,7 +194,6 @@ void produce_pro(){
         sem_post(MxFL);
         produce_blah(b_node);
         sem_wait(MxL1);
-        printf("is this happening, inside pro loop\n");
         link_node(b_node,List1);
         sem_post(MxL1);
         sem_post(SCL1);
