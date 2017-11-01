@@ -86,7 +86,6 @@ void dnode_free(DNode *node, DList* List){
     if(node){
         node->next=List->pfree;
         List->pfree=node-List->pool;
-        List->npool=List->npool--;
     }
 }
 
